@@ -319,6 +319,11 @@
         .mic-ring.recording .mic-pulse {
             animation: pulse 1.6s ease-out infinite;
         }
+        @media (prefers-reduced-motion: reduce) {
+            .mic-ring.recording .mic-pulse {
+                animation: none;
+            }
+        }
         @keyframes pulse {
             0% {
                 opacity: 0.35;
@@ -592,53 +597,6 @@
             text-align: right;
         }
 
-        .quality-row {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 18px;
-            flex-wrap: wrap;
-        }
-        .quality-gauge {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: conic-gradient(var(--saffron) calc(var(--pct, 0)*1%), var(--saffron-soft) 0);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-        .quality-gauge .center {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: var(--white);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 0.85rem;
-            color: var(--blue-deep);
-        }
-        .quality-text {
-            flex: 1;
-            min-width: 160px;
-        }
-        .quality-text .ql-label {
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: var(--blue-deep);
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            margin-bottom: 4px;
-        }
-        .quality-text ul {
-            margin: 4px 0 0;
-            padding-left: 18px;
-            font-size: 0.82rem;
-            color: var(--muted);
-        }
         .doc-paper {
             background: var(--white);
             border: 1px solid var(--line);
@@ -727,7 +685,6 @@
             .steptrail,
             .row-actions,
             .action-grid,
-            .quality-row,
             .disclaimer,
             #step1,
             #step2,
@@ -917,6 +874,17 @@
                         <div style="margin-bottom:16px;background:var(--saffron-soft);padding:10px 14px;border-radius:8px;border:1px solid #FFE0B2;font-size:0.85rem;color:var(--blue-deep);">
                             ✏️ <strong>Review &amp; edit</strong> — The AI has summarised your issue and drafted questions. You can edit any field below before generating the final RTI.
                         </div>
+
+                        <!-- DYNAMIC CLARIFICATION BOX (FOCUSED GAPS, NUMBERS, & AMBIGUITY HANDLING) -->
+                        <div id="clarificationBox" style="display:none; background:#FFF3CD; border: 1.5px solid #FFEBAA; color:#856404; padding:18px; border-radius:10px; margin-bottom:18px;" class="ui">
+                            <h3 style="margin-top:0; font-size:1rem; font-weight:800; display: flex; align-items: center; gap: 8px;">🔍 Let's make your RTI stronger!</h3>
+                            <p id="clarificationQuestionText" style="font-size:0.88rem; margin-bottom:12px; font-weight:600; line-height: 1.45;"></p>
+                            <textarea id="clarificationAnswer" placeholder="Type or speak your answer here..." style="width:100%; border:1.5px solid var(--line); border-radius:8px; padding:8px 10px; font-size:0.9rem; margin-bottom:10px; resize: vertical; min-height: 54px;"></textarea>
+                            <div class="row-actions" style="margin-top:0; justify-content: flex-start;">
+                                <button class="btn btn-primary ui" id="submitClarificationBtn" style="padding:8px 14px; font-size:0.8rem;">Update Details</button>
+                            </div>
+                        </div>
+
                         <div class="field-group">
                             <label class="ui" id="labelName">Your name <span style="font-weight:500;color:var(--muted);">(optional)</span></label>
                             <input type="text" id="f_name" placeholder="Leave blank if you prefer to fill by hand later">
@@ -976,7 +944,7 @@
                 </div>
             </section>
 
-            <!-- STEP 3: DRAFT -->
+            <!-- STEP 3: DRAFT (STARTING DIRECTLY FROM DRAFT DOCUMENT) -->
             <section id="step3" class="panel">
                 <div class="card">
                     <div id="step3Loading" class="loading-box">
@@ -984,13 +952,6 @@
                         <div class="ui" id="step3LoadingText">Drafting your RTI application…</div>
                     </div>
                     <div id="step3Body" style="display:none;">
-                        <div class="quality-row">
-                            <div class="quality-gauge" id="qualityGauge" style="--pct:0;"><div class="center" id="qualityPct">0</div></div>
-                            <div class="quality-text">
-                                <div class="ql-label ui" id="qlLabel">RTI strength</div>
-                                <ul id="suggestionsList"></ul>
-                            </div>
-                        </div>
                         <div class="doc-paper" id="draftDocument">
                             <div class="doc-watermark"><span id="docWatermark">RTI Act, 2005 — Draft</span><span id="docMeta"></span></div>
                             <div id="draftText"></div>
@@ -1015,6 +976,16 @@
         </main>
 
         <p class="disclaimer ui" id="disclaimer">Prototype demo for academic / civic-tech purposes. Drafts are AI-generated — please review before filing, and fill in your name, address and signature by hand. Not affiliated with any government department.</p>
+    </div>
+
+    <!-- Custom Modal for Non-RTI Issues -->
+    <div id="nonRtiModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+        <div class="card" style="max-width:500px; width:100%; animation: fadein 0.3s ease; text-align:center;">
+            <div style="font-size:3rem; margin-bottom:12px;">⚠️</div>
+            <h2 class="ui" style="color:#8A2E1B; font-weight:800; margin-top:0;">Not an RTI Issue</h2>
+            <p id="nonRtiExplanation" class="ui" style="color:var(--muted); font-size:0.92rem; line-height:1.55; margin-bottom:20px;"></p>
+            <button class="btn btn-primary ui" id="closeNonRtiModalBtn">I understand, edit my complaint</button>
+        </div>
     </div>
 
     <script>
@@ -1300,7 +1271,9 @@
             analysis: null,
             draft: null,
             speaking: false,
-            onRtiInfoPage: false
+            onRtiInfoPage: false,
+            // Track the original complaint across clarification loops
+            originalComplaint: ''
         };
 
         // ---------- GEMINI CONFIG ----------
@@ -1372,7 +1345,7 @@
                 ]
             },
             pension: {
-                keywords: ['pension', 'old age pension', 'widow pension', 'disability pension', 'pension scheme', 'पेंशन', 'பெన్ชั่น', 'పెన్షన్'],
+                keywords: ['pension', 'old age pension', 'widow pension', 'disability pension', 'pension scheme', 'पेंशन', 'பென்ชั่น', 'పెన్షన్'],
                 department: 'Social Welfare Department / Pension Department',
                 level: 'Mandal',
                 questions: [
@@ -1608,7 +1581,7 @@
                 { icon: '📋', title: 'ప్రభుత్వ రికార్డులు & పత్రాలు', desc: 'ఫైల్‌లు, కరస్పాండెన్స్, రిపోర్టులు, తనిఖీ నోట్స్ మరియు ప్రభుత్వ సంస్థ నిల్వ రికార్డుల ప్రమాణిత కాపీలు.' },
                 { icon: '💰', title: 'బడ్జెట్లు & వినియోగం', desc: 'కేటాయించిన నిధులు, విడుదల చేసిన మొత్తాలు, వినియోగ ధృవపత్రాలు, ఆడిట్ రిపోర్టులు మరియు ప్రభుత్వ డబ్బు ఎలా వినియోగించబడిందో వివరాలు.' },
                 { icon: '🛣️', title: 'ప్రాజెక్టులు & ఇన్ఫ్రాస్ట్రక్టర్', desc: 'మంజూరు లేఖలు, టెండర్ పత్రాలు, కాంట్రాక్టర్ వివరాలు, పూర్తి స్థితి మరియు రోడ్డులు, భవనాలు, పథకాల భౌతిక పురోగతి.' },
-                { icon: '🏥', title: 'ప్రజా సేవలు', desc: 'ఆసుపత్రి బెడ్ లభ్యత, మందుల స్టాక్, సిబ్బంది ఖాళీలు, పెన్షన్ స్థితి, రేషన్ కార్డ్ జాబితాలు మరియు సంక్షేమ పథక లబ్ధిదారులు.' },
+                { icon: '🏥', title: 'ప్రజా సేవలు', desc: 'ఆసుపత్రి బెడ్ లభ్యత, మందుల స్టాక్, సిబ్బంది ఖాళీలు, పెన్షన్ స్థితి, రేషన్ కార్డ్ జాబితాలు మరియు సంక్షేమ పథక లబ్ధిదారుడు.' },
                 { icon: '📜', title: 'విధానాలు & నిర్ణయాలు', desc: 'సమావేశ నిమిషాలు, విధాన నోట్స్, ప్రశాసన నిర్ణయాల కారణాలు మరియు आदेशాలు లేదా సర్క్యులర్ కాపీలు.' },
                 { icon: '🏛️', title: 'భూమి & ఆస్తులు', desc: 'భూమి రికార్డులు, ఎన్‌కంబరెన్స్ వివరాలు, స్వాధీన నోటీసులు, భవన అనుమతులు మరియు ప్రభుత్వం నిల్వ ఆస్తి వివరాలు.' },
                 { icon: '👥', title: 'నియామకాలు & నియోజన', desc: 'ఖాళీ జాబితాలు, ఎంపిక నిబంధనలు, మెరిట్ జాబితాలు మరియు నియామకాలు, పదోన్నతుల వ్యక్తిగతేతర వివరాలు.' },
@@ -1797,52 +1770,6 @@
             });
         }
 
-        function renderTemplateGrid() {
-            const grid = document.getElementById('templateGrid');
-            if (!grid) return;
-            grid.innerHTML = '';
-            const l10n = TEMPLATE_L10N[langKey()] || TEMPLATE_L10N.en;
-            TEMPLATES.forEach((tmpl, i) => {
-                const card = document.createElement('button');
-                card.className = 'template-card';
-                const loc = l10n[i] || { title: tmpl.title, desc: tmpl.desc };
-                card.innerHTML = `<div class="t-title">${loc.title}</div><div class="t-desc">${loc.desc}</div>`;
-                card.addEventListener('click', () => startFromTemplate(tmpl));
-                grid.appendChild(card);
-            });
-        }
-
-        function renderRtiInfoGrid() {
-            const grid = document.getElementById('rtiInfoGrid');
-            grid.innerHTML = '';
-            const items = RTI_INFO_L10N[langKey()] || RTI_INFO_L10N.en;
-            items.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'rti-info-item';
-                div.innerHTML = `<div class="icon">${item.icon}</div><div><h3>${item.title}</h3><p>${item.desc}</p></div>`;
-                grid.appendChild(div);
-            });
-        }
-
-        // ---------- Navigation ----------
-        function goToStep(n) {
-            state.currentStep = n;
-            state.onRtiInfoPage = false;
-            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-            document.getElementById('step' + n).classList.add('active');
-            document.getElementById('steptrail').style.display = '';
-            renderSteptrail();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function openRtiInfo() {
-            state.onRtiInfoPage = true;
-            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-            document.getElementById('rtiInfoPage').classList.add('active');
-            document.getElementById('steptrail').style.display = 'none';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
         // ================================================================
         //  AI DYNAMIC SUMMARY GRAMMAR REFINEMENT & POLISH
         // ================================================================
@@ -1912,6 +1839,52 @@
                 document.getElementById('refineGrammarBtn').disabled = false;
             }
         });
+
+        function renderTemplateGrid() {
+            const grid = document.getElementById('templateGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            const l10n = TEMPLATE_L10N[langKey()] || TEMPLATE_L10N.en;
+            TEMPLATES.forEach((tmpl, i) => {
+                const card = document.createElement('button');
+                card.className = 'template-card';
+                const loc = l10n[i] || { title: tmpl.title, desc: tmpl.desc };
+                card.innerHTML = `<div class="t-title">${loc.title}</div><div class="t-desc">${loc.desc}</div>`;
+                card.addEventListener('click', () => startFromTemplate(tmpl));
+                grid.appendChild(card);
+            });
+        }
+
+        function renderRtiInfoGrid() {
+            const grid = document.getElementById('rtiInfoGrid');
+            grid.innerHTML = '';
+            const items = RTI_INFO_L10N[langKey()] || RTI_INFO_L10N.en;
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'rti-info-item';
+                div.innerHTML = `<div class="icon">${item.icon}</div><div><h3>${item.title}</h3><p>${item.desc}</p></div>`;
+                grid.appendChild(div);
+            });
+        }
+
+        // ---------- Navigation ----------
+        function goToStep(n) {
+            state.currentStep = n;
+            state.onRtiInfoPage = false;
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('step' + n).classList.add('active');
+            document.getElementById('steptrail').style.display = '';
+            renderSteptrail();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function openRtiInfo() {
+            state.onRtiInfoPage = true;
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('rtiInfoPage').classList.add('active');
+            document.getElementById('steptrail').style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
         function closeRtiInfo() {
             state.onRtiInfoPage = false;
@@ -2121,6 +2094,7 @@
             document.getElementById('f_questions').value = qs.map((q, i) => (i + 1) + '. ' + q).join('\n');
             document.getElementById('confFill').style.width = '85%';
             document.getElementById('confPct').textContent = '85%';
+            document.getElementById('clarificationBox').style.display = 'none';
             goToStep(2);
             document.getElementById('step2Body').style.display = 'block';
             document.getElementById('step2Loading').style.display = 'none';
@@ -2146,39 +2120,58 @@
                 return;
             }
 
+            state.originalComplaint = complaint; // save context
+            await runIssueAnalysis(complaint);
+        });
+
+        // ---------- Abstracted core analysis engine ----------
+        async function runIssueAnalysis(complaintText) {
             goToStep(2);
             document.getElementById('step2Body').style.display = 'none';
             document.getElementById('step2Loading').style.display = 'flex';
+            document.getElementById('clarificationBox').style.display = 'none';
             clearError('step2Error');
 
             // Reset fields
             document.getElementById('f_questions').value = '';
             document.getElementById('f_summary').value = '';
             document.getElementById('f_department').value = '';
-            document.getElementById('refineGrammarStatus').textContent = '';
 
             try {
-                // 1. Keyword-based mapping (fallback initialization)
-                let matched = detectAuthorityFromText(complaint);
-                let fallbackDept = matched ? matched.department : 'Public Works Department / Municipality';
-                let fallbackLevel = matched ? matched.level : 'Mandal';
-                let fallbackQuestions = matched && matched.questions ? matched.questions : AUTHORITY_MAPPING.default.questions;
-
-                // 2. Try Gemini if key exists
                 const cfg = getGeminiConfig();
                 if (cfg.apiKey) {
                     try {
                         const langPlain = langKey() === 'en' ? 'English' : (langKey() === 'hi' ? 'Hindi' : 'Telugu');
                         const prompt = `
-                            You are an expert RTI assistant. Read the complaint and respond ONLY with a JSON object (no markdown, no extra text) in this exact schema:
+                            You are an expert, empathetic civic counselor assisting citizens with Right to Information (RTI) filings under the RTI Act, 2005.
+                            Analyze the citizen's complaint below and construct a structured JSON response.
+
+                            EMPATHETIC THINKING & STRICT COGNITIVE LOGIC RULES:
+                            1. PRIVATE DISPUTES (e.g. Test Case 9: factory wage delay by a private employer): Set is_rti to false. Write a compassionate, professional explanation in ${langPlain} for "non_rti_reason" stating that RTI only applies to public authorities/government bodies. Direct them to approach the local Labor Court or State Labor Commissioner's grievance cell.
+                            2. REFUSE DIRECT ACTION DEMANDS / COMPLAINTS (e.g. Test Case 10: "I want the road in front of my house repaired"): Do not make questions demanding action. Automatically reframe this in "summary" as seeking public project records (e.g. "Seeking records regarding sanction status, budget allocations, contractor work orders, and execution parameters for the road construction project at [Location]"). Ensure the questions seek raw files, dates, and ledgers (e.g. "Provide a certified copy of the sanctioned project report, work order, and contractor name...").
+                            3. MIXED ISSUES (e.g. Test Case 8: Pension + Ration card combined): Detect that these target separate departments. Set "confidence" below 85% (e.g. 70) and ask in "clarification_question": "You have mentioned two distinct issues (Ration Card and Pension) which are processed by different departments. Legally, they should be filed as separate RTIs. Which of these two would you like us to focus on for this application draft?"
+                            4. EMOTIONAL / VERY VAGUE INPUTS (e.g. Test Case 6: "Sarkar ne pareshan kar diya hai"): Set "confidence" to 40. In "clarification_question", politely ask: "I understand you are facing difficulties with public services. To draft a legally compliant RTI, could you specify which department or service (such as Ration card, Pension, Road construction, or government ID cards) this grievance is about?"
+                            5. SHORT FRAGMENT COGNITION (e.g. Test Case 7: "Pension nahi mila"): Set "confidence" to 50. In "clarification_question", ask: "Could you please specify which pension scheme this relates to (e.g., Old Age, Widow, Disability), whether it is State or Central, and if you have an application/reference number?"
+                            6. SCHOOL ADMISSION REFUSAL (e.g. Test Case 5): Recognize that direct admission is a grievance, but we can search records. Reframe to: "Requesting certified copies of school admission registers, vacant seat logs, and written reasons recorded on file for admission refusal at [School Name] for the current year."
+                            7. EXTRACTING NUMBERS (Aadhaar, Ration, Pension ID, Caste Certificate Ref Numbers):
+                               - If any ID number or application reference is provided, inject it directly into the "summary" (e.g. "seeking progress status of Caste Application No. [Ref Number]").
+                               - Reference that exact ID/Ref number inside the questions to target your request precisely (e.g. "Provide the date-wise processing logs and files for Application No. [Ref Number]").
+                               - If the issue is Pension, Aadhaar, Ration, or Caste, and they haven't provided a number/card ID, set "confidence" below 85% and ask for it in "clarification_question".
+
+                            Respond ONLY with a valid JSON object matching this schema perfectly with absolutely no external markdown fencing:
                             {
-                              "summary": "A singular, grammatically polished, highly objective administrative statement in ${langPlain} summarizing the core grievance perfectly.",
+                              "is_rti": true,
+                              "non_rti_reason": "If is_rti is false, write a 2-3 sentence compassionate explanation in ${langPlain} explaining why and what they should do instead. Otherwise leave empty.",
+                              "summary": "Formal summary in ${langPlain}. Reframe complaints/grievances/demands into objective data-seeking statements of facts. Include reference numbers if provided.",
                               "department": "Official department name handling this issue.",
                               "level": "Village/Mandal/District/State/Central",
                               "questions": ["Question 1", "Question 2", "Question 3", "Question 4"],
-                              "confidence": 85
+                              "confidence": 85,
+                              "needs_clarification": false,
+                              "clarification_question": "If details (location, State vs Central jurisdiction, scheme name, or reference/card numbers) are missing, write a polite clarifying question in ${langPlain} here."
                             }
-                            Complaint: "${complaint}"
+
+                            Complaint: "${complaintText}"
                         `;
 
                         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${cfg.apiKey}`;
@@ -2187,7 +2180,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 contents: [{ parts: [{ text: prompt }] }],
-                                generationConfig: { temperature: 0.2 }
+                                generationConfig: { temperature: 0.1 }
                             })
                         });
 
@@ -2207,32 +2200,91 @@
                         raw = raw.substring(start, end + 1);
                         const parsed = JSON.parse(raw);
 
-                        // Use AI result
-                        document.getElementById('f_summary').value = parsed.summary || complaint;
-                        const dept = parsed.department || fallbackDept;
-                        document.getElementById('f_department').value = dept;
-                        const lvl = parsed.level || fallbackLevel;
+                        // --- Non-RTI check ---
+                        if (parsed.is_rti === false || parsed.confidence === 0) {
+                            document.getElementById('step2Loading').style.display = 'none';
+                            goToStep(1); // Return to home
+                            document.getElementById('nonRtiExplanation').textContent = parsed.non_rti_reason || "This issue does not fall under the purview of the RTI Act, 2005. RTI is used to request records and information from public authorities, not for resolving private disputes or personal grievances.";
+                            document.getElementById('nonRtiModal').style.display = 'flex';
+                            return;
+                        }
+
+                        // --- Dynamic Clarification (Confidence < 85%) ---
+                        let confidence = Math.min(100, Math.max(10, parseInt(parsed.confidence) || 75));
+                        if (confidence < 85 || parsed.needs_clarification === true || (parsed.clarification_question && parsed.clarification_question.trim() !== '')) {
+                            // Enforce low confidence display
+                            if (confidence >= 85) confidence = 75; 
+                            
+                            document.getElementById('clarificationQuestionText').textContent = parsed.clarification_question || "Please provide more specific details about your issue (e.g. location, government department, card number) so we can construct a robust application.";
+                            document.getElementById('clarificationBox').style.display = 'block';
+                            document.getElementById('clarificationAnswer').value = '';
+                        } else {
+                            document.getElementById('clarificationBox').style.display = 'none';
+                        }
+
+                        // Populate details
+                        document.getElementById('f_summary').value = parsed.summary || complaintText;
+                        document.getElementById('f_department').value = parsed.department || 'Public Information Officer';
+                        const lvl = parsed.level || 'Mandal';
                         document.getElementById('f_level').value = lvl;
                         document.getElementById('f_target').value = getTargetOfficer(lvl);
-                        const qs = Array.isArray(parsed.questions) ? parsed.questions : fallbackQuestions;
+                        const qs = Array.isArray(parsed.questions) ? parsed.questions : AUTHORITY_MAPPING.default.questions;
                         document.getElementById('f_questions').value = qs.map((q, i) => (i + 1) + '. ' + q).join('\n');
-                        const conf = Math.min(100, Math.max(40, parseInt(parsed.confidence) || 75));
-                        document.getElementById('confFill').style.width = conf + '%';
-                        document.getElementById('confPct').textContent = conf + '%';
+                        
+                        document.getElementById('confFill').style.width = confidence + '%';
+                        document.getElementById('confPct').textContent = confidence + '%';
+                        
                         document.getElementById('step2Loading').style.display = 'none';
                         document.getElementById('step2Body').style.display = 'block';
-                        return; // successfully handled via AI
+                        return;
                     } catch (err) {
-                        console.warn('Gemini analysis failed:', err);
+                        console.warn('AI analysis pipeline failed:', err);
                         showError('step2Error', `⚠️ AI analysis error: ${err.message}. Loaded offline fallback templates.`);
                     }
                 } else {
                     showError('step2Error', '⚠️ No Gemini API key set. Loaded offline fallback templates.');
                 }
 
-                // ---------- Fallback: use keyword mapping ----------
-                let summary = complaint;
-                const sentences = complaint.split(/[.!?]+/).filter(s => s.trim().length > 10);
+                // ---------- Fallback: Offline Keyword mapping with smart checks ----------
+                let isRtiFallback = true;
+                let matched = detectAuthorityFromText(complaintText);
+                let fallbackDept = matched ? matched.department : 'Public Works Department / Municipality';
+                let fallbackLevel = matched ? matched.level : 'Mandal';
+                let fallbackQuestions = matched && matched.questions ? matched.questions : AUTHORITY_MAPPING.default.questions;
+                let summary = complaintText;
+                let calculatedConfidence = 70;
+                let clarificationPromptText = '';
+
+                // Simple offline non-RTI heuristic checks
+                const privateKeywords = ['private bank', 'dispute with neighbor', 'salary delay in private', 'family fight', 'divorce'];
+                const lowerComp = complaintText.toLowerCase();
+                if (privateKeywords.some(kw => lowerComp.includes(kw))) {
+                    isRtiFallback = false;
+                }
+
+                if (!isRtiFallback) {
+                    document.getElementById('step2Loading').style.display = 'none';
+                    goToStep(1);
+                    document.getElementById('nonRtiExplanation').textContent = "Based on offline keywords, this grievance appears to be a personal dispute or private enterprise matter. RTI Applications can only be filed to request records held by public government bodies.";
+                    document.getElementById('nonRtiModal').style.display = 'flex';
+                    return;
+                }
+
+                // Simple offline gap check for road construction and pension
+                if (lowerComp.includes('road') && !lowerComp.includes('village') && !lowerComp.includes('at') && !lowerComp.includes('near')) {
+                    calculatedConfidence = 65;
+                    clarificationPromptText = "Which specific road or village location does this road construction problem concern?";
+                } else if (lowerComp.includes('pension') && !lowerComp.includes('state') && !lowerComp.includes('central') && !lowerComp.includes('old age') && !lowerComp.includes('widow')) {
+                    calculatedConfidence = 65;
+                    clarificationPromptText = "Is this a Central Government pension scheme (like EPFO) or a State Government pension welfare scheme?";
+                }
+
+                if (clarificationPromptText) {
+                    document.getElementById('clarificationQuestionText').textContent = clarificationPromptText;
+                    document.getElementById('clarificationBox').style.display = 'block';
+                }
+
+                const sentences = complaintText.split(/[.!?]+/).filter(s => s.trim().length > 10);
                 if (sentences.length > 0) {
                     summary = sentences.slice(0, 2).join('. ') + '.';
                 }
@@ -2241,28 +2293,34 @@
                 document.getElementById('f_level').value = fallbackLevel;
                 document.getElementById('f_target').value = getTargetOfficer(fallbackLevel);
                 document.getElementById('f_questions').value = fallbackQuestions.map((q, i) => (i + 1) + '. ' + q).join('\n');
-                document.getElementById('confFill').style.width = '65%';
-                document.getElementById('confPct').textContent = '65%';
+                
+                document.getElementById('confFill').style.width = calculatedConfidence + '%';
+                document.getElementById('confPct').textContent = calculatedConfidence + '%';
 
             } catch (err) {
-                console.error('Analysis error:', err);
+                console.error('Core Analysis error:', err);
                 showError('step2Error', `⚠️ Unexpected error: ${err.message}. Using fallback.`);
-                
-                // Absolute fallback
-                document.getElementById('f_summary').value = complaint;
-                const matched2 = detectAuthorityFromText(complaint);
-                document.getElementById('f_department').value = matched2 ? matched2.department : 'Public Works Department / Municipality';
-                const lvl2 = matched2 ? matched2.level : 'Mandal';
-                document.getElementById('f_level').value = lvl2;
-                document.getElementById('f_target').value = getTargetOfficer(lvl2);
-                const qs2 = matched2 && matched2.questions ? matched2.questions : AUTHORITY_MAPPING.default.questions;
-                document.getElementById('f_questions').value = qs2.map((q, i) => (i + 1) + '. ' + q).join('\n');
-                document.getElementById('confFill').style.width = '60%';
-                document.getElementById('confPct').textContent = '60%';
             } finally {
                 document.getElementById('step2Loading').style.display = 'none';
                 document.getElementById('step2Body').style.display = 'block';
             }
+        }
+
+        // ---------- Clarification Answer Submission ----------
+        document.getElementById('submitClarificationBtn').addEventListener('click', async () => {
+            const answer = document.getElementById('clarificationAnswer').value.trim();
+            if (!answer) return;
+
+            // Merge answers to build an expanded query profile
+            const expandedComplaintText = `Original Problem: ${state.originalComplaint}. Additional clarified details: ${answer}`;
+            state.originalComplaint = expandedComplaintText; // save iteration
+            
+            await runIssueAnalysis(expandedComplaintText);
+        });
+
+        // Close Non-RTI Modal
+        document.getElementById('closeNonRtiModalBtn').addEventListener('click', () => {
+            document.getElementById('nonRtiModal').style.display = 'none';
         });
 
         // ================================================================
@@ -2438,16 +2496,6 @@
             document.getElementById('step3Body').style.display = 'block';
             document.getElementById('draftText').textContent = json.draftText || '';
             document.getElementById('docMeta').textContent = department + ' · ' + level;
-            const q = Math.max(0, Math.min(100, Math.round(json.qualityScore || 70)));
-            document.getElementById('qualityGauge').style.setProperty('--pct', q);
-            document.getElementById('qualityPct').textContent = q;
-            const ul = document.getElementById('suggestionsList');
-            ul.innerHTML = '';
-            (json.suggestions || []).forEach(s => {
-                const li = document.createElement('li');
-                li.textContent = s;
-                ul.appendChild(li);
-            });
         }
 
         // ================================================================
