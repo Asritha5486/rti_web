@@ -989,9 +989,6 @@
     </div>
 
     <script>
-        // ================================================================
-        //  RTI Sahayak — Full Application (Safe Global Lexical Scope Integration)
-        // ================================================================
 
         // ---------- LANGUAGES ----------
         const LANGS = [
@@ -1623,7 +1620,7 @@
             ]
         };
 
-        // ---------- FALLBACK TEXTS FOR DRAFT ----------
+        // ---------- FALLBACK TEXTS FOR DRAFT ----------------
         const FALLBACK_TEXTS = {
             en: {
                 to: 'To: ',
@@ -1665,10 +1662,7 @@
                 date: 'తేదీ: ____________________'
             }
         };
-
-        // ================================================================
         //  UI SETUP
-        // ================================================================
 
         const langSelect = document.getElementById('langSelect');
         LANGS.forEach((l, i) => {
@@ -1769,10 +1763,7 @@
                 el.appendChild(div);
             });
         }
-
-        // ================================================================
         //  AI DYNAMIC SUMMARY GRAMMAR REFINEMENT & POLISH
-        // ================================================================
         document.getElementById('refineGrammarBtn').addEventListener('click', async () => {
             const summaryBox = document.getElementById('f_summary');
             const rawText = summaryBox.value.trim();
@@ -1998,9 +1989,7 @@
         }
         checkBrowserWarnings();
 
-        // ================================================================
         //  STEP 1 — VOICE + TEXT + TEMPLATES
-        // ================================================================
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const micBtn = document.getElementById('micBtn');
@@ -2106,10 +2095,7 @@
         document.getElementById('rtiInfoBackBtn').addEventListener('click', closeRtiInfo);
         document.getElementById('backTo1Btn').addEventListener('click', () => goToStep(1));
         document.getElementById('backTo2Btn').addEventListener('click', () => goToStep(2));
-
-        // ================================================================
         //  STEP 1 → STEP 2 — AI Analysis & Dynamic Heuristic Mappings
-        // ================================================================
 
         document.getElementById('proceedBtn').addEventListener('click', async () => {
             const complaint = (fallbackInput.value.trim() || state.finalTranscript.trim() || liveTranscript.textContent.trim());
@@ -2323,9 +2309,7 @@
             document.getElementById('nonRtiModal').style.display = 'none';
         });
 
-        // ================================================================
         //  STEP 2 → STEP 3 — Generate Draft & Format Clean-up
-        // ================================================================
 
         document.getElementById('genDraftBtn').addEventListener('click', async () => {
             const summary = document.getElementById('f_summary').value.trim();
@@ -2498,9 +2482,7 @@
             document.getElementById('docMeta').textContent = department + ' · ' + level;
         }
 
-        // ================================================================
         //  STEP 3 — ACTIONS
-        // ================================================================
 
         document.getElementById('restartBtn').addEventListener('click', () => {
             state.finalTranscript = '';
@@ -2611,10 +2593,7 @@
             btn.textContent = t('readAloudStop');
             speechSynthesis.speak(utter);
         });
-
-        // ================================================================
         //  INIT
-        // ================================================================
 
         renderSteptrail();
         renderTemplateGrid();
