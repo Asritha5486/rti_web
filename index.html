@@ -9,7 +9,7 @@
     <script>
         // Load authority mapping from JSON (or paste the JSON directly)
         let AUTHORITY_MAPPING = {}; // will be filled
-        fetch('static/authority_mapping.json')
+        fetch('data/authority_mapping.json')
             .then(res => res.json())
             .then(data => { AUTHORITY_MAPPING = data; })
             .catch(err => console.warn('Could not load authority mapping, using fallback', err));
@@ -368,6 +368,17 @@
         }
         .mic-ring.recording .mic-btn .inner {
             background: var(--saffron);
+        }
+        .mic-ring.speaking .mic-btn {
+            border-color: var(--green);
+        }
+        .mic-ring.speaking .mic-btn .inner {
+            background: var(--green);
+            animation: speakGlow 1s ease-in-out infinite;
+        }
+        @keyframes speakGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(28,122,62,0.35); }
+            50% { box-shadow: 0 0 0 10px rgba(28,122,62,0); }
         }
         .mic-btn:hover {
             transform: scale(1.03);
@@ -787,12 +798,20 @@
                         <option value="gemini-1.5-pro">gemini-1.5-pro</option>
                     </select>
                 </div>
+                <div class="row">
+                    <label>ElevenLabs Key</label>
+                    <input id="elevenKeyInput" type="password" placeholder="Enter your ElevenLabs API key (optional)" />
+                </div>
+                <div class="row">
+                    <label>Voice ID</label>
+                    <input id="elevenVoiceInput" type="text" placeholder="e.g. 21m00Tcm4TlvDq8ikWAM" />
+                </div>
                 <div class="api-actions">
                     <button class="btn btn-outline ui" id="clearApiConfigBtn">Clear</button>
                     <button class="btn btn-primary ui" id="saveApiConfigBtn">Save</button>
                     <button class="btn ui" id="testApiBtn">🔍 Test Key</button>
                 </div>
-                <div id="apiConfigMsg">Enter your Gemini API key to enable AI features. Your key is stored locally in your browser only.</div>
+                <div id="apiConfigMsg">Enter your Gemini API key to enable AI features, and optionally an ElevenLabs key + Voice ID for natural conversational voice. Keys are stored locally in your browser only.</div>
             </div>
         </div>
 
@@ -879,6 +898,22 @@
                         <div id="clarificationBox" style="display:none; background:#FFF3CD; border: 1.5px solid #FFEBAA; color:#856404; padding:18px; border-radius:10px; margin-bottom:18px;" class="ui">
                             <h3 style="margin-top:0; font-size:1rem; font-weight:800; display: flex; align-items: center; gap: 8px;">🔍 Let's make your RTI stronger!</h3>
                             <p id="clarificationQuestionText" style="font-size:0.88rem; margin-bottom:12px; font-weight:600; line-height: 1.45;"></p>
+                            <div class="mic-zone" id="clarificationMicZone" style="padding: 8px 0 4px;">
+                                <div class="mic-ring" id="clarMicRing" style="width:76px;height:76px;">
+                                    <div class="mic-pulse"></div>
+                                    <button class="mic-btn ui" id="clarMicBtn" type="button" aria-label="Tap to speak your answer" style="width:60px;height:60px;">
+                                        <div class="inner" style="width:46px;height:46px;">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2" stroke-linecap="round" style="width:20px;height:20px;">
+                                                <path d="M12 1a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                                <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                                                <line x1="12" y1="18" x2="12" y2="22"/>
+                                                <line x1="9" y1="22" x2="15" y2="22"/>
+                                            </svg>
+                                        </div>
+                                    </button>
+                                </div>
+                                <div class="mic-status ui" id="clarMicStatus" style="font-size:0.78rem;"></div>
+                            </div>
                             <textarea id="clarificationAnswer" placeholder="Type or speak your answer here..." style="width:100%; border:1.5px solid var(--line); border-radius:8px; padding:8px 10px; font-size:0.9rem; margin-bottom:10px; resize: vertical; min-height: 54px;"></textarea>
                             <div class="row-actions" style="margin-top:0; justify-content: flex-start;">
                                 <button class="btn btn-primary ui" id="submitClarificationBtn" style="padding:8px 14px; font-size:0.8rem;">Update Details</button>
@@ -989,6 +1024,9 @@
     </div>
 
     <script>
+        // ================================================================
+        //  RTI Sahayak — Full Application (Safe Global Lexical Scope Integration)
+        // ================================================================
 
         // ---------- LANGUAGES ----------
         const LANGS = [
@@ -1270,7 +1308,8 @@
             speaking: false,
             onRtiInfoPage: false,
             // Track the original complaint across clarification loops
-            originalComplaint: ''
+            originalComplaint: '',
+            greeted: false
         };
 
         // ---------- GEMINI CONFIG ----------
@@ -1342,7 +1381,7 @@
                 ]
             },
             pension: {
-                keywords: ['pension', 'old age pension', 'widow pension', 'disability pension', 'pension scheme', 'पेंशन', 'பென்ชั่น', 'పెన్షన్'],
+                keywords: ['pension', 'old age pension', 'widow pension', 'disability pension', 'pension scheme', 'पेंशन', 'பென்ชั่న', 'పెన్షన్'],
                 department: 'Social Welfare Department / Pension Department',
                 level: 'Mandal',
                 questions: [
@@ -1620,7 +1659,7 @@
             ]
         };
 
-        // ---------- FALLBACK TEXTS FOR DRAFT ----------------
+        // ---------- FALLBACK TEXTS FOR DRAFT ----------
         const FALLBACK_TEXTS = {
             en: {
                 to: 'To: ',
@@ -1662,7 +1701,10 @@
                 date: 'తేదీ: ____________________'
             }
         };
+
+        // ================================================================
         //  UI SETUP
+        // ================================================================
 
         const langSelect = document.getElementById('langSelect');
         LANGS.forEach((l, i) => {
@@ -1763,7 +1805,10 @@
                 el.appendChild(div);
             });
         }
+
+        // ================================================================
         //  AI DYNAMIC SUMMARY GRAMMAR REFINEMENT & POLISH
+        // ================================================================
         document.getElementById('refineGrammarBtn').addEventListener('click', async () => {
             const summaryBox = document.getElementById('f_summary');
             const rawText = summaryBox.value.trim();
@@ -1891,6 +1936,8 @@
         const apiConfigPanel = document.getElementById('apiConfigPanel');
         const apiKeyInput = document.getElementById('apiKeyInput');
         const modelSelect = document.getElementById('modelSelect');
+        const elevenKeyInput = document.getElementById('elevenKeyInput');
+        const elevenVoiceInput = document.getElementById('elevenVoiceInput');
         const saveApiConfigBtn = document.getElementById('saveApiConfigBtn');
         const clearApiConfigBtn = document.getElementById('clearApiConfigBtn');
         const testApiBtn = document.getElementById('testApiBtn');
@@ -1900,6 +1947,12 @@
             const cfg = JSON.parse(localStorage.getItem('rti_gemini_cfg') || '{}');
             if (cfg.apiKey) apiKeyInput.value = cfg.apiKey;
             if (cfg.model) modelSelect.value = cfg.model;
+        } catch (_) {}
+
+        try {
+            const ecfg = JSON.parse(localStorage.getItem('rti_eleven_cfg') || '{}');
+            if (ecfg.apiKey) elevenKeyInput.value = ecfg.apiKey;
+            if (ecfg.voiceId) elevenVoiceInput.value = ecfg.voiceId;
         } catch (_) {}
 
         apiConfigBtn.addEventListener('click', () => {
@@ -1915,14 +1968,18 @@
                 return;
             }
             saveGeminiConfig(key, model);
-            apiConfigMsg.textContent = '✅ Gemini configuration saved locally.';
+            saveElevenLabsConfig(elevenKeyInput.value.trim(), elevenVoiceInput.value.trim());
+            apiConfigMsg.textContent = '✅ Configuration saved locally.';
             apiConfigMsg.style.color = 'var(--muted)';
         });
 
         clearApiConfigBtn.addEventListener('click', () => {
             apiKeyInput.value = '';
             modelSelect.value = 'gemini-2.5-flash';
+            elevenKeyInput.value = '';
+            elevenVoiceInput.value = '';
             try { localStorage.removeItem('rti_gemini_cfg'); } catch (_) {}
+            try { localStorage.removeItem('rti_eleven_cfg'); } catch (_) {}
             apiConfigMsg.textContent = 'Cleared configuration.';
             apiConfigMsg.style.color = 'var(--muted)';
         });
@@ -1989,7 +2046,9 @@
         }
         checkBrowserWarnings();
 
+        // ================================================================
         //  STEP 1 — VOICE + TEXT + TEMPLATES
+        // ================================================================
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const micBtn = document.getElementById('micBtn');
@@ -2024,6 +2083,22 @@
                 state.recognition && state.recognition.stop();
                 return;
             }
+            if (state.speaking) {
+                stopSpeaking();
+            }
+            if (!state.greeted) {
+                state.greeted = true;
+                micStatus.textContent = 'Namaste! Please tell me about your issue…';
+                speakText(
+                    "Namaste! I'm Sahayak, your RTI assistant. Please tell me about your problem, and I will help you file a Right to Information application.",
+                    { ring: micRing }
+                ).then(() => { beginListening(); }).catch(() => { beginListening(); });
+                return;
+            }
+            beginListening();
+        });
+
+        function beginListening() {
             const rec = new SpeechRecognition();
             rec.lang = state.lang.code;
             rec.continuous = true;
@@ -2059,18 +2134,29 @@
             rec.onend = () => {
                 state.recognizing = false;
                 micRing.classList.remove('recording');
-                micStatus.textContent = t('micTap');
                 stopTimer();
                 state.finalTranscript = liveTranscript.textContent.trim() + ' ';
+
+                // Conversational auto-continue: if we captured something, confirm and move on
+                const captured = liveTranscript.textContent.trim();
+                if (captured) {
+                    micStatus.textContent = 'Got it — analysing…';
+                    speakText("Thank you. Let me analyse your issue.", { ring: micRing }).finally(() => {
+                        document.getElementById('proceedBtn').click();
+                    });
+                } else {
+                    micStatus.textContent = t('micTap');
+                }
             };
             try { rec.start(); } catch (_) { micStatus.textContent = t('micFail'); }
-        });
+        }
 
         document.getElementById('tryAgainBtn').addEventListener('click', () => {
             state.finalTranscript = '';
             liveTranscript.textContent = '';
             fallbackInput.value = '';
             document.getElementById('step1Error').innerHTML = '';
+            state.greeted = false;
         });
 
         // ---------- Template picker ----------
@@ -2095,7 +2181,10 @@
         document.getElementById('rtiInfoBackBtn').addEventListener('click', closeRtiInfo);
         document.getElementById('backTo1Btn').addEventListener('click', () => goToStep(1));
         document.getElementById('backTo2Btn').addEventListener('click', () => goToStep(2));
+
+        // ================================================================
         //  STEP 1 → STEP 2 — AI Analysis & Dynamic Heuristic Mappings
+        // ================================================================
 
         document.getElementById('proceedBtn').addEventListener('click', async () => {
             const complaint = (fallbackInput.value.trim() || state.finalTranscript.trim() || liveTranscript.textContent.trim());
@@ -2201,9 +2290,12 @@
                             // Enforce low confidence display
                             if (confidence >= 85) confidence = 75; 
                             
-                            document.getElementById('clarificationQuestionText').textContent = parsed.clarification_question || "Please provide more specific details about your issue (e.g. location, government department, card number) so we can construct a robust application.";
+                            const clarQ = parsed.clarification_question || "Please provide more specific details about your issue (e.g. location, government department, card number) so we can construct a robust application.";
+                            document.getElementById('clarificationQuestionText').textContent = clarQ;
                             document.getElementById('clarificationBox').style.display = 'block';
                             document.getElementById('clarificationAnswer').value = '';
+                            // Speak the clarification question conversationally, then auto-listen for the answer
+                            speakClarificationAndListen(clarQ);
                         } else {
                             document.getElementById('clarificationBox').style.display = 'none';
                         }
@@ -2268,6 +2360,7 @@
                 if (clarificationPromptText) {
                     document.getElementById('clarificationQuestionText').textContent = clarificationPromptText;
                     document.getElementById('clarificationBox').style.display = 'block';
+                    speakClarificationAndListen(clarificationPromptText);
                 }
 
                 const sentences = complaintText.split(/[.!?]+/).filter(s => s.trim().length > 10);
@@ -2297,6 +2390,10 @@
             const answer = document.getElementById('clarificationAnswer').value.trim();
             if (!answer) return;
 
+            if (state.clarRecognition && state.clarListening) {
+                try { state.clarRecognition.stop(); } catch (_) {}
+            }
+
             // Merge answers to build an expanded query profile
             const expandedComplaintText = `Original Problem: ${state.originalComplaint}. Additional clarified details: ${answer}`;
             state.originalComplaint = expandedComplaintText; // save iteration
@@ -2309,7 +2406,9 @@
             document.getElementById('nonRtiModal').style.display = 'none';
         });
 
+        // ================================================================
         //  STEP 2 → STEP 3 — Generate Draft & Format Clean-up
+        // ================================================================
 
         document.getElementById('genDraftBtn').addEventListener('click', async () => {
             const summary = document.getElementById('f_summary').value.trim();
@@ -2482,7 +2581,9 @@
             document.getElementById('docMeta').textContent = department + ' · ' + level;
         }
 
+        // ================================================================
         //  STEP 3 — ACTIONS
+        // ================================================================
 
         document.getElementById('restartBtn').addEventListener('click', () => {
             state.finalTranscript = '';
@@ -2496,6 +2597,7 @@
             document.getElementById('f_questions').value = '';
             document.getElementById('confFill').style.width = '0%';
             document.getElementById('confPct').textContent = '0%';
+            state.greeted = false;
             goToStep(1);
         });
 
@@ -2570,30 +2672,198 @@
             URL.revokeObjectURL(url);
         });
 
+        // ================================================================
+        //  ELEVENLABS CONVERSATIONAL VOICE LAYER
+        //  (with graceful fallback to browser speechSynthesis if not configured)
+        // ================================================================
+
+        function getElevenLabsConfig() {
+            let apiKey = '';
+            let voiceId = '21m00Tcm4TlvDq8ikWAM'; // ElevenLabs default demo voice ("Rachel")
+            try {
+                const cfg = JSON.parse(localStorage.getItem('rti_eleven_cfg') || '{}');
+                apiKey = cfg.apiKey || '';
+                voiceId = cfg.voiceId || voiceId;
+            } catch (_) {}
+            return { apiKey, voiceId };
+        }
+
+        function saveElevenLabsConfig(apiKey, voiceId) {
+            try {
+                localStorage.setItem('rti_eleven_cfg', JSON.stringify({ apiKey, voiceId }));
+            } catch (_) {}
+        }
+
+        state.currentAudio = null;
+
+        function stopSpeaking() {
+            if (state.currentAudio) {
+                try { state.currentAudio.pause(); } catch (_) {}
+                state.currentAudio = null;
+            }
+            if ('speechSynthesis' in window) speechSynthesis.cancel();
+            state.speaking = false;
+            micRing.classList.remove('speaking');
+        }
+
+        // Speaks `text` aloud. Uses ElevenLabs if configured, else falls back to
+        // the browser's built-in speechSynthesis. Returns a Promise that resolves
+        // once playback finishes (or fails) so callers can chain the next step.
+        function speakText(text, opts) {
+            opts = opts || {};
+            const ring = opts.ring || null;
+            const cfg = getElevenLabsConfig();
+
+            return new Promise((resolve) => {
+                if (!text) { resolve(); return; }
+
+                const finish = () => {
+                    state.speaking = false;
+                    if (ring) ring.classList.remove('speaking');
+                    resolve();
+                };
+
+                if (cfg.apiKey) {
+                    state.speaking = true;
+                    if (ring) ring.classList.add('speaking');
+                    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${cfg.voiceId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'xi-api-key': cfg.apiKey,
+                            'Accept': 'audio/mpeg'
+                        },
+                        body: JSON.stringify({
+                            text: text,
+                            model_id: 'eleven_multilingual_v2',
+                            voice_settings: { stability: 0.45, similarity_boost: 0.8 }
+                        })
+                    }).then(resp => {
+                        if (!resp.ok) throw new Error('ElevenLabs TTS error ' + resp.status);
+                        return resp.blob();
+                    }).then(blob => {
+                        const url = URL.createObjectURL(blob);
+                        const audio = new Audio(url);
+                        state.currentAudio = audio;
+                        audio.onended = () => { URL.revokeObjectURL(url); finish(); };
+                        audio.onerror = () => { URL.revokeObjectURL(url); finish(); };
+                        audio.play().catch(() => {
+                            // Autoplay was blocked (rare after a user tap, but handle gracefully)
+                            finish();
+                        });
+                    }).catch(err => {
+                        console.warn('ElevenLabs speech failed, falling back to browser voice:', err);
+                        speakWithBrowserVoice(text, ring, finish);
+                    });
+                } else {
+                    speakWithBrowserVoice(text, ring, finish);
+                }
+            });
+        }
+
+        function speakWithBrowserVoice(text, ring, onDone) {
+            if (!('speechSynthesis' in window)) { onDone(); return; }
+            try {
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = state.lang.code;
+                const voices = speechSynthesis.getVoices();
+                const match = voices.find(v => v.lang === state.lang.code) || voices.find(v => v.lang.startsWith(state.lang.code.split('-')[0]));
+                if (match) utter.voice = match;
+                state.speaking = true;
+                if (ring) ring.classList.add('speaking');
+                utter.onend = onDone;
+                utter.onerror = onDone;
+                speechSynthesis.speak(utter);
+            } catch (_) {
+                onDone();
+            }
+        }
+
+        // ---------- Step 2: conversational clarification (speak question, then listen) ----------
+        function speakClarificationAndListen(questionText) {
+            const clarRing = document.getElementById('clarMicRing');
+            const clarStatus = document.getElementById('clarMicStatus');
+            clarStatus.textContent = '🔊 Sahayak is asking…';
+            speakText(questionText, { ring: clarRing }).then(() => {
+                clarStatus.textContent = 'Listening… tap the mic if it doesn\'t start automatically';
+                startClarificationListening();
+            });
+        }
+
+        function startClarificationListening() {
+            if (!SpeechRecognition) return;
+            const clarRing = document.getElementById('clarMicRing');
+            const clarStatus = document.getElementById('clarMicStatus');
+            const answerBox = document.getElementById('clarificationAnswer');
+
+            const rec = new SpeechRecognition();
+            rec.lang = state.lang.code;
+            rec.continuous = true;
+            rec.interimResults = true;
+            state.clarRecognition = rec;
+
+            let base = answerBox.value ? answerBox.value.trim() + ' ' : '';
+
+            rec.onstart = () => {
+                state.clarListening = true;
+                clarRing.classList.add('recording');
+                clarStatus.textContent = t('micListening');
+            };
+            rec.onresult = (e) => {
+                let currentFinal = '';
+                let interim = '';
+                for (let i = 0; i < e.results.length; i++) {
+                    const piece = e.results[i][0].transcript;
+                    if (e.results[i].isFinal) { currentFinal += piece + ' '; } else { interim += piece; }
+                }
+                answerBox.value = (base + currentFinal + interim).trim();
+            };
+            rec.onerror = () => {
+                clarStatus.textContent = t('micError');
+            };
+            rec.onend = () => {
+                state.clarListening = false;
+                clarRing.classList.remove('recording');
+                const answered = answerBox.value.trim();
+                if (answered) {
+                    clarStatus.textContent = 'Got it — updating your RTI…';
+                    document.getElementById('submitClarificationBtn').click();
+                } else {
+                    clarStatus.textContent = '';
+                }
+            };
+            try { rec.start(); } catch (_) { clarStatus.textContent = t('micFail'); }
+        }
+
+        document.getElementById('clarMicBtn').addEventListener('click', () => {
+            if (!SpeechRecognition) return;
+            if (state.clarListening) {
+                state.clarRecognition && state.clarRecognition.stop();
+                return;
+            }
+            if (state.speaking) stopSpeaking();
+            startClarificationListening();
+        });
+
+        // ---------- Step 3: Read aloud using ElevenLabs (falls back to browser voice) ----------
         document.getElementById('readAloudBtn').addEventListener('click', () => {
             const btn = document.getElementById('readAloudBtn');
             if (state.speaking) {
-                speechSynthesis.cancel();
-                state.speaking = false;
+                stopSpeaking();
                 btn.textContent = t('readAloud');
                 return;
             }
             const text = document.getElementById('draftText').textContent;
-            if (!text || !('speechSynthesis' in window)) return;
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.lang = state.lang.code;
-            const voices = speechSynthesis.getVoices();
-            const match = voices.find(v => v.lang === state.lang.code) || voices.find(v => v.lang.startsWith(state.lang.code.split('-')[0]));
-            if (match) utter.voice = match;
-            utter.onend = () => { 
-                state.speaking = false;
-                btn.textContent = t('readAloud'); 
-            };
-            state.speaking = true;
+            if (!text) return;
             btn.textContent = t('readAloudStop');
-            speechSynthesis.speak(utter);
+            speakText(text).then(() => {
+                btn.textContent = t('readAloud');
+            });
         });
+
+        // ================================================================
         //  INIT
+        // ================================================================
 
         renderSteptrail();
         renderTemplateGrid();
@@ -2607,7 +2877,8 @@
 
         console.log('✅ RTI Sahayak loaded. Speak, type, or pick a template.');
         console.log('📌 Set your Gemini API key via the ⚙️ gear icon for AI enhancements.');
-        console.log('🔍 Use the "Test Key" button to verify your API key works.');
+        console.log('🎙️ Set your ElevenLabs API key + Voice ID for natural conversational voice.');
+        console.log('🔍 Use the "Test Key" button to verify your Gemini API key works.');
     </script>
 </body>
 </html>
